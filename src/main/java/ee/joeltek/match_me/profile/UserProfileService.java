@@ -1,23 +1,35 @@
 package ee.joeltek.match_me.profile;
 
-import ee.joeltek.match_me.common.ResourceExistsException;
-import ee.joeltek.match_me.common.ResourceNotFoundException;
-import ee.joeltek.match_me.location.UserLocationRepository;
-import lombok.RequiredArgsConstructor;
+import java.awt.image.BufferedImage;
+import java.io.IOException;
+import java.util.List;
+import java.util.Objects;
+
+import javax.imageio.ImageIO;
+
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.util.List;
+import ee.joeltek.match_me.common.BusinessRuleException;
+import ee.joeltek.match_me.common.ResourceExistsException;
+import ee.joeltek.match_me.common.ResourceNotFoundException;
+import ee.joeltek.match_me.location.UserLocationRepository;
+import ee.joeltek.match_me.storage.StorageService;
+import lombok.RequiredArgsConstructor;
 
 @Service
 @RequiredArgsConstructor
 public class UserProfileService {
 
+    private final ProfileAccessService profileAccessService;
     private final UserProfileRepository userProfileRepository;
     private final ProfileImageResolver profileImageResolver;
     private final UserLocationRepository userLocationRepository;
+    private final StorageService storageService;
 
 
     @Value("${app.upload-url-prefix}")
@@ -28,6 +40,13 @@ public class UserProfileService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Profile not found for user: " + userId));
 
         return mapToDto(profile);
+    }
+
+    public ProfileResponse getUserProfile(Long userId, Long requesterUserId) {
+        if (!profileAccessService.canViewUser(requesterUserId, userId)) throw new ResourceNotFoundException("User not found");
+        ProfileResponse profile = getProfile(userId);
+
+        return profile;
     }
 
     public ProfileResponse updateProfile(Long userId, UpdateProfileRequest request) {
@@ -99,24 +118,72 @@ public class UserProfileService {
         return userProfileRepository.findAllByCity(city).stream().map(UserProfile::getUserId).toList();
     }
 
-    public ProfileResponse updateProfilePictureUrl(Long userId, String fileExt) {
-        UserProfile profile = userProfileRepository.findById(userId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Profile not found for user: " + userId));
-        profile.setCustomProfilePictureUrl(uploadUrlPrefix + "/" + userId + "." + fileExt);
-        userProfileRepository.save(profile);
-        return mapToDto(profile);
+    public ProfileResponse updateProfilePicture(Long userId, MultipartFile file) {
+        if (file.isEmpty()) throw new BusinessRuleException("Uploaded file is empty.");
+        List<String> allowedFileExtensions = List.of("jpg", "jpeg", "png");
+        List<String> allowedMimeTypes = List.of("image/jpeg", "image/png");
+        String originalFileName = StringUtils.cleanPath(Objects.requireNonNull(file.getOriginalFilename()));
+        String contentType = file.getContentType();
+
+        String fileExt = StringUtils.getFilenameExtension(file.getOriginalFilename());
+        // validate file
+        if (originalFileName.contains(".."))
+            throw new BusinessRuleException("Filename contains invalid path sequence: " + originalFileName);
+        if (fileExt == null || !allowedFileExtensions.contains(fileExt.toLowerCase()))
+            throw new BusinessRuleException("Wrong file type. Allowed file extensions are: .jpg, .jpeg and .png");
+        if (!allowedMimeTypes.contains(contentType))
+            throw new BusinessRuleException("Wrong file type. Allowed file types are: image/jpeg and image/png");
+        try {
+            BufferedImage image = ImageIO.read(file.getInputStream());
+            if (image == null)
+                throw new BusinessRuleException("File is not an image.");
+        } catch (IOException e) {
+            throw new BusinessRuleException("Cant read file.");
+        }
+
+        String filename = userId + "." + fileExt;
+        // store file
+        storageService.store(file, filename);
+        // update profile
+        ProfileResponse response = updateProfilePictureUrl(userId, fileExt);
+
+        return response;
     }
 
-    public ProfileResponse deleteProfilePictureUrl(Long userId) {
+    public ProfileResponse deleteProfilePicture(Long userId) {
+        //delete file from server
+        String fileUrl = getCustomProfilePictureUrl(userId);
+        if (fileUrl == null) throw new ResourceNotFoundException("Custom profile picture not set.");
+        String fileExt = fileUrl.substring(fileUrl.indexOf("."));
+        String filename = userId + fileExt;
+        System.out.println(filename);
+        storageService.delete(filename);
+
+        //mark customProfilePictureUrl null and return updated profile
+        ProfileResponse response = deleteProfilePictureUrl(userId);
+
+        return response;
+    }
+
+    private ProfileResponse deleteProfilePictureUrl(Long userId) {
         UserProfile profile = userProfileRepository.findById(userId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Profile not found for user: " + userId));
         profile.setCustomProfilePictureUrl(null);
         userProfileRepository.save(profile);
         return mapToDto(profile);
     }
-     public String getCustomProfilePictureUrl(Long userId) {
+
+    private String getCustomProfilePictureUrl(Long userId) {
          UserProfile profile = userProfileRepository.findById(userId)
                  .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Profile not found for user: " + userId));
          return profile.getCustomProfilePictureUrl();
+     }
+
+     private ProfileResponse updateProfilePictureUrl(Long userId, String fileExt) {
+         UserProfile profile = userProfileRepository.findById(userId)
+                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Profile not found for user: " + userId));
+         profile.setCustomProfilePictureUrl(uploadUrlPrefix + "/" + userId + "." + fileExt);
+         userProfileRepository.save(profile);
+         return mapToDto(profile);
      }
 }

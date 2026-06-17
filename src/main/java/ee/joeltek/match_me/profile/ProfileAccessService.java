@@ -1,20 +1,24 @@
 package ee.joeltek.match_me.profile;
 
-import ee.joeltek.match_me.connection.ConnectionService;
-import ee.joeltek.match_me.recommendation.RecommendationService;
-import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+
+import ee.joeltek.match_me.connection.ConnectionRepository;
+import ee.joeltek.match_me.connection.ConnectionStatus;
+import ee.joeltek.match_me.recommendation.RecommendationRepository;
+import lombok.RequiredArgsConstructor;
 
 @Service
 @RequiredArgsConstructor
 public class ProfileAccessService {
-    private final RecommendationService recommendationService;
-    private final ConnectionService connectionService;
+    private final ConnectionRepository connectionRepository;
+    private final RecommendationRepository recommendationRepository;
 
     public boolean canViewUser(Long requesterUserId, Long targetUserId){
-        return recommendationService.isRecommended(requesterUserId, targetUserId) ||
-                connectionService.hasOutstandingConnectionRequest(requesterUserId, targetUserId) ||
-                connectionService.isConnected(requesterUserId, targetUserId) ||
-                requesterUserId.equals(targetUserId);
+        return recommendationRepository.existsByOwnerUserIdAndRecommendedUserId(requesterUserId, targetUserId) 
+            || connectionRepository.existsBySenderIdAndReceiverIdAndStatus(requesterUserId, targetUserId, ConnectionStatus.PENDING)
+            || connectionRepository.existsBySenderIdAndReceiverIdAndStatus(targetUserId, requesterUserId, ConnectionStatus.PENDING)
+            || connectionRepository.existsBySenderIdAndReceiverIdAndStatus(requesterUserId, targetUserId, ConnectionStatus.ACCEPTED)
+            || connectionRepository.existsBySenderIdAndReceiverIdAndStatus(targetUserId, requesterUserId, ConnectionStatus.ACCEPTED)
+            || requesterUserId.equals(targetUserId);
     }
 }

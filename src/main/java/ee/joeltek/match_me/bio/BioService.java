@@ -1,16 +1,49 @@
 package ee.joeltek.match_me.bio;
 
-import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Service;
-
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
+
+import org.springframework.http.HttpStatus;
+import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
+
+import ee.joeltek.match_me.common.ResourceNotFoundException;
+import ee.joeltek.match_me.profile.ProfileAccessService;
+import ee.joeltek.match_me.profile.UserProfileService;
+import lombok.RequiredArgsConstructor;
 
 @RequiredArgsConstructor
 @Service
 public class BioService {
     private final BioRepository bioRepository;
+    private final ProfileAccessService profileAccessService;
+    private final UserProfileService profileService;
+    
+    public BioResponse getMyBio(Long userId) {
+        return fetchBioResponse(userId);
+    }
+
+    public BioResponse getUserBio(Long userId, Long requesterUserId) {
+        if (!profileAccessService.canViewUser(requesterUserId, userId)) 
+            throw new ResourceNotFoundException("User not found");
+
+        return fetchBioResponse(userId);
+    }
+
+    public Map<String, String> submitBio(Long userId, BioRequest request) {
+        UserBio bio = bioRepository.findById(userId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Bio not found for user: " + userId));
+
+        Archetype winningArchetype = updateBioScores(bio, request.getAnswers());
+        bioRepository.save(bio);
+        profileService.updateArchetype(userId, winningArchetype.name());
+
+        return Map.of(
+                "message", "Bio processed successfully!",
+                "archetype", winningArchetype.name());
+    }
 
     public Archetype updateBioScores(UserBio bio, List<Integer> answers) {
         if (answers == null || answers.size() != 18) {
@@ -102,5 +135,20 @@ public class BioService {
                 && bio.getHarmonizerScore() > 0
                 && bio.getExplorerScore() > 0
                 && bio.getExecutorScore() > 0;
+    }
+
+    private BioResponse fetchBioResponse(Long userId) {
+        UserBio bio = bioRepository.findById(userId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Bio not found for user: " + userId));
+
+        return new BioResponse(
+            bio.getUserId(),
+            bio.getVisionaryScore(),
+            bio.getChallengerScore(),
+            bio.getArchitectScore(),
+            bio.getHarmonizerScore(),
+            bio.getExplorerScore(),
+            bio.getExecutorScore()
+        );
     }
 }

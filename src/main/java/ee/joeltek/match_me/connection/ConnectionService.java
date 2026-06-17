@@ -137,14 +137,4 @@ public class ConnectionService {
                 && profile.getBirthDate() != null
                 && profile.getCity() != null;
     }
-
-    public boolean hasOutstandingConnectionRequest(Long requesterUserId, Long targetUserId) {
-        return connectionRepository.existsBySenderIdAndReceiverIdAndStatus(requesterUserId, targetUserId, ConnectionStatus.PENDING)
-            || connectionRepository.existsBySenderIdAndReceiverIdAndStatus(targetUserId, requesterUserId, ConnectionStatus.PENDING);
-    }
-
-    public boolean isConnected(Long requesterUserId, Long targetUserId) {
-        return connectionRepository.existsBySenderIdAndReceiverIdAndStatus(requesterUserId, targetUserId, ConnectionStatus.ACCEPTED)
-            || connectionRepository.existsBySenderIdAndReceiverIdAndStatus(targetUserId, requesterUserId, ConnectionStatus.ACCEPTED);
-    }
 }

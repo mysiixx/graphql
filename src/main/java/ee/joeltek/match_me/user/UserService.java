@@ -2,6 +2,7 @@ package ee.joeltek.match_me.user;
 
 import ee.joeltek.match_me.bio.BioService;
 import ee.joeltek.match_me.bio.UserBio;
+import ee.joeltek.match_me.common.ResourceNotFoundException;
 import ee.joeltek.match_me.profile.*;
 
 import ee.joeltek.match_me.user.dto.OnboardingStatusResponse;
@@ -19,6 +20,7 @@ import java.util.Optional;
 @RequiredArgsConstructor
 @Service
 public class UserService {
+    private final ProfileAccessService profileAccessService;
     private final UserRepository userRepository;
     private final UserProfileRepository userProfileRepository;
     private final PasswordEncoder passwordEncoder;
@@ -55,13 +57,24 @@ public class UserService {
         return passwordEncoder.matches(rawPassword, user.getPasswordHash());
     }
 
-    public UserResponse getById(Long userId) {
+    public UserResponse getMe(Long userId) {
         UserEntity user = userRepository.findById(userId).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
 
         UserProfile profile = userProfileRepository.findById(userId)
                 .orElseThrow(() ->
                         new ResponseStatusException(HttpStatus.NOT_FOUND, "Profile not found"));
 
+        return new UserResponse(user.getUserId(), profile.getDisplayName(), profileImageResolver.resolveProfileImageUrl(profile));
+    }
+
+    public UserResponse getById(Long userId, Long requesterUserId) {
+        if (!profileAccessService.canViewUser(requesterUserId, userId)) throw new ResourceNotFoundException("User not found");
+
+        UserEntity user = userRepository.findById(userId).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
+        UserProfile profile = userProfileRepository.findById(userId)
+                .orElseThrow(() ->
+                        new ResponseStatusException(HttpStatus.NOT_FOUND, "Profile not found"));
+        
         return new UserResponse(user.getUserId(), profile.getDisplayName(), profileImageResolver.resolveProfileImageUrl(profile));
     }
 
