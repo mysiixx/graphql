@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>WS Test</title>
+  <script src="https://cdn.jsdelivr.net/npm/@stomp/stompjs@7.2.0/bundles/stomp.umd.min.js"></script>
+  <style>
+    body { font-family: sans-serif; max-width: 900px; margin: 24px auto; }
+    input, button, textarea { width: 100%; margin: 8px 0; padding: 8px; }
+    #log { height: 320px; }
+  </style>
+</head>
+<body>
+  <h1>Match Me WebSocket Test</h1>
+
+  <input id="wsUrl" value="ws://localhost:8080/ws/chat">
+  <textarea id="token" placeholder="JWT token"></textarea>
+  <input id="chatId" value="1">
+  <textarea id="messageContent" placeholder="Message content"></textarea>
+
+  <button id="connectBtn">Connect</button>
+  <button id="subscribeBtn">Subscribe</button>
+  <button id="typingBtn">Send typing.started</button>
+  <button id="typingStopBtn">Send typing.stopped</button>
+  <button id="messageBtn">Send message</button>
+  <button id="loadMessagesBtn">Load messages</button>
+
+  <textarea id="log" readonly></textarea>
+
+  <script>
+    let client = null;
+
+    function log(msg) {
+      const el = document.getElementById("log");
+      el.value += msg + "\n";
+      el.scrollTop = el.scrollHeight;
+    }
+
+    document.getElementById("connectBtn").onclick = () => {
+      const wsUrl = document.getElementById("wsUrl").value;
+      const token = document.getElementById("token").value.trim();
+
+      client = new StompJs.Client({
+        brokerURL: wsUrl,
+        connectHeaders: {
+          Authorization: `Bearer ${token}`
+        },
+        debug: (str) => log(`[debug] ${str}`),
+        reconnectDelay: 0,
+        onConnect: () => log("CONNECTED"),
+        onStompError: (frame) => log(`STOMP ERROR: ${frame.headers["message"] || "unknown"}`),
+        onWebSocketError: (err) => log(`WS ERROR: ${err}`),
+        onWebSocketClose: () => log("WS CLOSED")
+      });
+
+      client.activate();
+    };
+
+    document.getElementById("subscribeBtn").onclick = () => {
+      const chatId = document.getElementById("chatId").value;
+
+      client.subscribe(`/topic/chats/${chatId}/typing.started`, msg => {
+        log(`typing.started: ${msg.body}`);
+      });
+
+      client.subscribe(`/topic/chats/${chatId}/typing.stopped`, msg => {
+        log(`typing.stopped: ${msg.body}`);
+      });
+
+      client.subscribe(`/topic/chats/${chatId}/message.sent`, msg => {
+        log(`message.sent: ${msg.body}`);
+      });
+
+      client.subscribe(`/topic/chats/${chatId}/message.read`, msg => {
+        log(`message.read: ${msg.body}`);
+      });
+
+      client.subscribe(`/topic/chats/${chatId}/chat.updated`, msg => {
+        log(`chat.updated: ${msg.body}`);
+      });
+
+      log("SUBSCRIBED");
+    };
+
+    document.getElementById("typingBtn").onclick = () => {
+      const chatId = document.getElementById("chatId").value;
+      client.publish({
+        destination: `/app/chats/${chatId}/typing.started`,
+        body: ""
+      });
+      log("SENT typing.started");
+    };
+
+    document.getElementById("typingStopBtn").onclick = () => {
+      const chatId = document.getElementById("chatId").value;
+      client.publish({
+        destination: `/app/chats/${chatId}/typing.stopped`,
+        body: ""
+      });
+      log("SENT typing.stopped");
+    };
+
+    document.getElementById("messageBtn").onclick = () => {
+      const chatId = document.getElementById("chatId").value;
+      const content = document.getElementById("messageContent").value;
+      const token = document.getElementById("token").value.trim();
+      const wsUrl = document.getElementById("wsUrl").value;
+      const apiBase = wsUrl.replace(/^ws/, "http").replace(/\/ws\/chat$/, "");
+
+      fetch(`${apiBase}/chats/${chatId}/messages`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify({ content })
+      })
+        .then(async response => {
+          const body = await response.text();
+          log(`REST message response ${response.status}: ${body}`);
+        })
+        .catch(error => {
+          log(`REST message error: ${error}`);
+        });
+    };
+
+    document.getElementById("loadMessagesBtn").onclick = () => {
+      const chatId = document.getElementById("chatId").value;
+      const token = document.getElementById("token").value.trim();
+      const wsUrl = document.getElementById("wsUrl").value;
+      const apiBase = wsUrl.replace(/^ws/, "http").replace(/\/ws\/chat$/, "");
+
+      fetch(`${apiBase}/chats/${chatId}/messages`, {
+        method: "GET",
+        headers: {
+          "Authorization": `Bearer ${token}`
+        }
+      })
+        .then(async response => {
+          const body = await response.text();
+          log(`REST load messages ${response.status}: ${body}`);
+        })
+        .catch(error => {
+          log(`REST load messages error: ${error}`);
+        });
+    };
+  </script>
+</body>
+</html>
