@@ -64,6 +64,7 @@ public class SecurityConfig {
                         .requestMatchers("/websocket_test.html").permitAll()
                         .requestMatchers("/seeder").permitAll()
                         .requestMatchers("/graphiql").permitAll()
+                        .requestMatchers("/graphql").permitAll()
                         .anyRequest().authenticated()
 
                 )
