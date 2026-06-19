@@ -113,7 +113,7 @@ public class QueryResolver {
         Long userId = Long.valueOf(auth.getToken().getSubject());
         return connectionService.getAllIncomingRequests(userId)
             .stream()
-            .map(user -> userService.getById(user.getId(), userId))
+            .map(user -> userService.getById(user.getSenderId(), userId))
             .toList();
     }
 
@@ -121,7 +121,7 @@ public class QueryResolver {
         Long userId = Long.valueOf(auth.getToken().getSubject());
         return connectionService.getAllSentRequests(userId)
             .stream()
-            .map(user -> userService.getById(user.getId(), userId))
+            .map(user -> userService.getById(user.getReceiverId(), userId))
             .toList();
     }
 
