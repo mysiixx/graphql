@@ -61,7 +61,6 @@ public class SecurityConfig {
                         .requestMatchers("/auth/refresh").permitAll()
                         .requestMatchers("/ws/chat/**").permitAll()
                         .requestMatchers("/ws-test.html").permitAll()
-                        .requestMatchers("/websocket_test.html").permitAll()
                         .requestMatchers("/seeder").permitAll()
                         .requestMatchers("/graphiql").permitAll()
                         .requestMatchers("/graphql").permitAll()

@@ -1,10 +1,7 @@
 package ee.joeltek.match_me.location;
 
-import ee.joeltek.match_me.location.dto.UpdateUserLocationRequest;
-import ee.joeltek.match_me.location.dto.UserLocationResponse;
-import ee.joeltek.match_me.user.UserEntity;
-import ee.joeltek.match_me.user.UserRepository;
-import lombok.RequiredArgsConstructor;
+import java.util.Optional;
+
 import org.locationtech.jts.geom.Coordinate;
 import org.locationtech.jts.geom.GeometryFactory;
 import org.locationtech.jts.geom.Point;
@@ -13,8 +10,11 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.util.Optional;
-import java.util.List;
+import ee.joeltek.match_me.location.dto.UpdateUserLocationRequest;
+import ee.joeltek.match_me.location.dto.UserLocationResponse;
+import ee.joeltek.match_me.user.UserEntity;
+import ee.joeltek.match_me.user.UserRepository;
+import lombok.RequiredArgsConstructor;
 
 @RequiredArgsConstructor
 @Service
@@ -67,23 +67,6 @@ public class UserLocationService {
         response.setSource(userLocation.getSource());
         response.setUpdatedAt(userLocation.getUpdatedAt());
         return response;
-    }
-
-    public List<UserLocationResponse> getDiscoveryFeed(Long userId) {
-        // 1. Ensure the user has actually set their location before they can search
-        userLocationRepository.findById(userId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "You must set your location to view the discovery feed"));
-
-        // 2. Fetch the nearby user IDs from the database
-        List<Long> nearbyUserIds = userLocationRepository.findMutualUserIdsWithinRadius(userId);
-
-        // 3. Fetch the full UserLocation entities for those IDs
-        List<UserLocation> nearbyLocations = userLocationRepository.findAllById(nearbyUserIds);
-
-        // 4. Map the entities to the response DTOs
-        return nearbyLocations.stream()
-                .map(this::mapToUserLocationResponseDto)
-                .toList();
     }
 
     public UserLocationResponse getUserLocation(Long userId) {

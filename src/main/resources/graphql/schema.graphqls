@@ -1,0 +1,155 @@
+type Query {
+    user(userId: ID!): User
+    bio(userId: ID!): Bio
+    profile(userId: ID!): Profile
+    score(userId: ID!): RecommendationScore!   # compatibility percentage
+    messages(chatId: ID!): PaginatedMessages!
+
+    me: User!
+    myBio: Bio!
+    myProfile: Profile!
+    myLocation: Location!
+    onboardingStatus: OnboardingStatus!
+
+    recommendations: [User!]!
+    connections: [User!]!
+    inConnectionRequests: [User!]!
+    outConnectionRequests: [User!]!
+    chats: [Chat!]!
+}
+
+type Mutation {
+    register(request: RegisterInput!): RegisterResponse!
+    login(request: LoginInput!): LoginResponse!
+    # createChat(userId: ID!): ChatResponse!
+    # sendMessage(chatId: ID!, content: String): MessageResponse!
+    # submitBio(request: BioInput!): BioResponse!
+    # requestConnection(targetUserId: ID!): ConnectionResponse!
+    # updateConnection(request: ConnectionUpdateInput!): ConnectionResponse!
+    # disconnectConnection(targetUserId: ID!): Boolean
+    # updateLocation(request: UpdateLocationInput): Location!
+    # updateProfile(request: ProfileUpdateInput!): Profile!
+    # updateProfilePicture(file: ???): Profile!
+    # deleteProfilePicture(userId: ID!): Profile!
+    # dismissRecommendation(targetUserId: ID!, userId: ID!): Boolean
+}
+
+type User {
+    id: ID!
+    displayName: String!
+    profilePictureUrl: String!
+    bio: Bio!
+    profile: Profile!
+}
+
+type Bio {
+    id: ID!
+    visionaryScore: Int!
+    challengerScore: Int!
+    architectScore: Int!
+    harmonizerScore: Int!
+    explorerScore: Int!
+    executorScore: Int!
+    user: User!
+}
+
+type Profile {
+    id: ID!
+    displayName: String
+    firstName: String
+    lastName: String
+    profilePictureUrl: String
+    city: String
+    birthDate: String
+    aboutMe: String
+    connectionType: ConnectionType
+    archetype: Archetype
+    user: User
+}
+
+type Chat {
+    id: ID!
+    otherUserId: ID!
+    lastMessageAt: String!
+    unreadCount: Int!
+}
+
+type Message {
+    id: ID!
+    chatId: ID!
+    senderId: ID!
+    content: String!
+    sentAt: String!
+    readAt: String!
+}
+
+type PaginatedMessages {
+    items: [Message!]!
+    page: Int!
+    size: Int!
+    totalItems: Int!
+    totalPages: Int!
+}
+
+type Location {
+    userId: Int!
+    longitude: Float!
+    latitude: Float!
+    preferredRadiusMeters: Int!
+    source: LocationSource!
+    updatedAt: String!
+}
+
+# Custom types
+input RegisterInput {
+    email: String!
+    password: String!
+}
+
+input LoginInput {
+    email: String!
+    password: String!
+    rememberMe: Boolean
+}
+
+type RegisterResponse {
+    id: ID!
+    email: String!
+}
+
+type LoginResponse {
+    accessToken: String!
+    refreshToken: String
+    expiresIn: Int
+}
+
+type RecommendationScore {
+    score: Float!
+}
+
+type OnboardingStatus {
+    profileComplete: Boolean!
+    bioComplete: Boolean!
+}
+
+enum ConnectionType {
+    FRIENDSHIP
+    WORK
+    RELATIONSHIP
+    LEARNING
+    OTHER
+}
+
+enum Archetype {
+    VISIONARY
+    CHALLENGER
+    ARCHITECT
+    EXPLORER
+    EXECUTOR
+    HARMONIZER
+}
+
+enum LocationSource {
+    BROWSER
+    MANUAL
+}
