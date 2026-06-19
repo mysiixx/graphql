@@ -21,17 +21,16 @@ type Query {
 type Mutation {
     register(request: RegisterInput!): RegisterResponse!
     login(request: LoginInput!): LoginResponse!
-    # createChat(userId: ID!): ChatResponse!
-    # sendMessage(chatId: ID!, content: String): MessageResponse!
-    # submitBio(request: BioInput!): BioResponse!
-    # requestConnection(targetUserId: ID!): ConnectionResponse!
-    # updateConnection(request: ConnectionUpdateInput!): ConnectionResponse!
-    # disconnectConnection(targetUserId: ID!): Boolean
-    # updateLocation(request: UpdateLocationInput): Location!
-    # updateProfile(request: ProfileUpdateInput!): Profile!
-    # updateProfilePicture(file: ???): Profile!
-    # deleteProfilePicture(userId: ID!): Profile!
-    # dismissRecommendation(targetUserId: ID!, userId: ID!): Boolean
+    createChat(request: CreateChat!): Chat!
+    sendMessage(chatId: ID!, request: SendMessage!): Message!
+    submitBio(request: BioInput!): SubmitBioResponse!
+    requestConnection(targetUserId: ID!): User!
+    acceptConnection(targetUserId: ID!): User!
+    rejectConnection(targetUserId: ID!): User!
+    disconnectConnection(targetUserId: ID!): Boolean
+    updateLocation(request: UpdateLocationInput!): Location!
+    updateProfile(request: ProfileUpdateInput!): Profile!
+    dismissRecommendation(targetUserId: ID!): Boolean
 }
 
 type User {
@@ -51,6 +50,11 @@ type Bio {
     explorerScore: Int!
     executorScore: Int!
     user: User!
+}
+
+type SubmitBioResponse {
+    message: String!
+    archetype: Archetype!
 }
 
 type Profile {
@@ -80,7 +84,7 @@ type Message {
     senderId: ID!
     content: String!
     sentAt: String!
-    readAt: String!
+    readAt: String
 }
 
 type PaginatedMessages {
@@ -98,18 +102,6 @@ type Location {
     preferredRadiusMeters: Int!
     source: LocationSource!
     updatedAt: String!
-}
-
-# Custom types
-input RegisterInput {
-    email: String!
-    password: String!
-}
-
-input LoginInput {
-    email: String!
-    password: String!
-    rememberMe: Boolean
 }
 
 type RegisterResponse {
@@ -130,6 +122,56 @@ type RecommendationScore {
 type OnboardingStatus {
     profileComplete: Boolean!
     bioComplete: Boolean!
+}
+
+input RegisterInput {
+    email: String!
+    password: String!
+}
+
+input LoginInput {
+    email: String!
+    password: String!
+    rememberMe: Boolean
+}
+
+input CreateChat {
+    targetUserId: ID!
+}
+
+input SendMessage {
+    content: String!
+}
+
+input UpdateLocationInput {
+    latitude: Float!
+    longitude: Float!
+    preferredRadiusMeters: Int!
+    source: LocationSource!
+}
+
+input ProfileUpdateInput {
+    displayName: String
+    firstName: String
+    lastName: String
+    city: String
+    birthDate: String   # Java LocalDate -> YYYY-MM-DD
+    aboutMe: String
+    connectionType: ConnectionType
+}
+
+# List of 18 answers
+# 3 for each archetype
+# [1, 1, 1, # VISIONARY
+# 1, 1, 1,  # EXECUTOR
+# 1, 1, 1,  # EXPLORER
+# 1, 1, 1,  # ARCHITECT
+# 1, 1, 1,  # HARMONIZER
+# 1, 1, 1]  # CHALLENGER
+# in graphiql:
+# request: {answers: [3, 8, 5, 8, 3, 7, 9, 2, 6, 4, 8, 2, 5, 9, 3, 7, 10, 4]}
+input BioInput {
+    answers: [Int!]!
 }
 
 enum ConnectionType {
@@ -153,3 +195,4 @@ enum LocationSource {
     BROWSER
     MANUAL
 }
+

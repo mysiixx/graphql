@@ -40,6 +40,11 @@ public class ConnectionService {
         return connectionRepository.findAllBySenderIdAndStatus(currentUserId, ConnectionStatus.PENDING);
     }
 
+    public ConnectionEntity getById(Long connectionId) {
+        return connectionRepository.findById(connectionId)
+            .orElseThrow(() -> new ResourceNotFoundException("Connection not found"));
+    }
+
     @Transactional
     public ConnectionEntity requestConnection(Long senderId, Long receiverId) {
         if (!userRepository.existsById(senderId)) throw new ResourceNotFoundException("Sender not found");

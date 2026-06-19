@@ -7,6 +7,7 @@ import lombok.Data;
 @Data
 @AllArgsConstructor
 public class ConnectionResponse {
-    // Other users id
+    // REST API - Other users id
+    // GraphQL - connection id
     private Long id;
 }

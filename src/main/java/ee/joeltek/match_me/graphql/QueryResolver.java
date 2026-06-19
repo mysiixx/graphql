@@ -104,7 +104,9 @@ public class QueryResolver {
         Long userId = Long.valueOf(auth.getToken().getSubject());
         return connectionService.getAllAccepted(userId)
             .stream()
-            .map(user -> userService.getById(user.getId(), userId))
+            .map(entity -> entity.getSenderId().equals(userId)
+                    ? userService.getById(entity.getReceiverId(), userId)
+                    : userService.getById(entity.getSenderId(), userId))
             .toList();
     }
 
