@@ -144,6 +144,13 @@ The 200-user dataset generates fictitious users with `@example.com` emails and t
 
 ## Usage Guide
 
+When testing in GraphQL playground, after logging in copy the token and paste it into `Headers` section
+```bash
+{
+  "Authorization": "Bearer <token>"
+}
+```
+
 1. Register or log in.
 2. Complete the profile page, including city/location preference.
 3. Complete the bio quiz.
