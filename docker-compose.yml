@@ -1,0 +1,47 @@
+services:
+  db:
+    image: postgis/postgis:17-3.5
+    container_name: graphql-db
+    environment:
+      POSTGRES_DB: graphql
+      POSTGRES_USER: graphql
+      POSTGRES_PASSWORD: graphql
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U graphql -d graphql"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  backend:
+    build:
+      context: .
+    container_name: graphql-backend
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/graphql
+      SPRING_DATASOURCE_USERNAME: graphql
+      SPRING_DATASOURCE_PASSWORD: graphql
+      SPRING_DATASOURCE_DRIVER_CLASS_NAME: org.postgresql.Driver
+
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+
+      JWT_PUBLIC_KEY_PATH: file:/app/keys/public.key
+      JWT_PRIVATE_KEY_PATH: file:/app/keys/private.key
+
+      APP_UPLOAD_DIR: /app/uploads/avatars
+    ports:
+      - "8080:8080"
+    volumes:
+      - backend-uploads:/app/uploads
+      - jwt-keys:/app/keys
+
+volumes:
+  postgres-data:
+  backend-uploads:
+  jwt-keys:

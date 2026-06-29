@@ -1,0 +1,12 @@
+services:
+  backend:
+    environment:
+      SPRING_PROFILES_ACTIVE: dev
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+      SPRING_GRAPHQL_GRAPHIQL_ENABLED: true
+    ports:
+      - "8080:8080"
+
+  db:
+    ports:
+      - "5432:5432"
